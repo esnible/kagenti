@@ -1,34 +1,5 @@
 {{- if .Values.components.mcpGateway.enabled }}
 apiVersion: gateway.networking.k8s.io/v1
-kind: Gateway
-metadata:
-  name: mcp-gateway
-  namespace: "{{ .Values.mcpGateway.namespaces.gatewaySystem }}"
-  annotations:
-    networking.istio.io/service-type: ClusterIP
-  labels:
-    gateway-type: mcpgateway
-    istio: ingressgateway
-    {{- include "kagenti.labels" . | nindent 4 }}
-spec:
-  gatewayClassName: istio
-  listeners:
-    - name: mcp # going to the Broker, and no hostname field
-      hostname: "{{ .Values.mcpGateway.hostname }}"
-      port: 8080
-      protocol: HTTP
-      allowedRoutes:
-        namespaces:
-          from: All
-    - name: mcps
-      port: 8080
-      protocol: HTTP
-      hostname: '*.mcp.local' # this hostname can be any wildcard. It is here to simplify routing, ensure the MCP Server routes attach to this listener only, can be protected by the AuthPolicy and routed to via envoy and the MCPRouter.
-      allowedRoutes:
-        namespaces:
-          from: All #any namespace can register an MCP server route
----
-apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   namespace: "{{ .Values.mcpGateway.namespaces.mcpSystem }}"
