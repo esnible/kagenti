@@ -241,6 +241,21 @@ export const ImportAgentPage: React.FC = () => {
     return `https://raw.githubusercontent.com/${org}/${repo}/refs/heads/${branch}/${path}/.env.openai`;
   };
 
+  // Validate image tag according to OCI distribution-spec
+  const isValidImageTag = (tag: string): boolean => {
+    if (!tag) return true; // empty tag is allowed (omitted)
+    const pattern = /^[a-zA-Z0-9_][a-zA-Z0-9._-]{0,127}$/;
+    return pattern.test(tag);
+  };
+
+  // Validate container image name according to OCI distribution-spec
+  // https://github.com/opencontainers/distribution-spec/blob/main/spec.md#workflow-categories
+  const isValidImageName = (image: string): boolean => {
+    if (!image) return false;
+    const pattern = /^[a-z0-9]+((\.|_|__|-+)[a-z0-9]+)*(\/[a-z0-9]+((\.|_|__|-+)[a-z0-9]+)*)*$/;
+    return pattern.test(image);
+  };
+
   // Environment variable handlers
   // Validate environment variable name according to Kubernetes rules
   const isValidEnvVarName = (name: string): boolean => {
@@ -405,9 +420,20 @@ export const ImportAgentPage: React.FC = () => {
       if (!containerImage) {
         newValidated.containerImage = 'error';
         isValid = false;
+      } else if (!isValidImageName(containerImage)) {
+        newValidated.containerImage = 'error';
+        isValid = false;
       } else {
         newValidated.containerImage = 'success';
       }
+    }
+
+    // Image tag validation (applies to both deployment methods)
+    if (imageTag && !isValidImageTag(imageTag)) {
+      newValidated.imageTag = 'error';
+      isValid = false;
+    } else {
+      newValidated.imageTag = 'success';
     }
 
     setValidated(newValidated);
@@ -858,7 +884,9 @@ export const ImportAgentPage: React.FC = () => {
                       <HelperText>
                         <HelperTextItem variant={validated.containerImage === 'error' ? 'error' : 'default'}>
                           {validated.containerImage === 'error'
-                            ? 'Container image is required'
+                            ? (!containerImage
+                              ? 'Container image is required'
+                              : 'Invalid image name — use lowercase letters, digits, dots, underscores, hyphens, and slashes only (no colon — the tag is a separate field)')
                             : 'Full image path without tag (e.g., quay.io/myorg/my-agent)'}
                         </HelperTextItem>
                       </HelperText>
@@ -871,7 +899,17 @@ export const ImportAgentPage: React.FC = () => {
                       value={imageTag}
                       onChange={(_e, value) => setImageTag(value)}
                       placeholder="latest"
+                      validated={validated.imageTag}
                     />
+                    <FormHelperText>
+                      <HelperText>
+                        <HelperTextItem variant={validated.imageTag === 'error' ? 'error' : 'default'}>
+                          {validated.imageTag === 'error'
+                            ? 'Invalid tag — must start with a letter, digit, or underscore and contain only letters, digits, dots, hyphens, and underscores (max 128 chars)'
+                            : 'Tag for the container image (e.g., latest, v1.0.0)'}
+                        </HelperTextItem>
+                      </HelperText>
+                    </FormHelperText>
                   </FormGroup>
 
                   <FormGroup label="Image Pull Secret" fieldId="imagePullSecret">
