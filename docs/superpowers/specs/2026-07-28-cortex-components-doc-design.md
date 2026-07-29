@@ -1,3 +1,7 @@
+---
+draft: true       # excluded from https://www.rossoctl.dev/
+---
+
 # Cortex Component Documentation Redesign
 
 Date: 2026-07-28
