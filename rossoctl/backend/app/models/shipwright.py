@@ -13,6 +13,8 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel
 
 from app.core.constants import (
+    DEFAULT_RESOURCE_LIMITS,
+    DEFAULT_RESOURCE_REQUESTS,
     SHIPWRIGHT_DEFAULT_DOCKERFILE,
     SHIPWRIGHT_DEFAULT_TIMEOUT,
 )
@@ -23,6 +25,26 @@ class ResourceType(str, Enum):
 
     AGENT = "agent"
     TOOL = "tool"
+
+
+class ResourceConfig(BaseModel):
+    """Container CPU/memory requests and limits, overriding the platform defaults.
+
+    Shared by agents and tools (source-build and direct-image paths alike).
+    """
+
+    requests: Optional[Dict[str, str]] = None
+    limits: Optional[Dict[str, str]] = None
+
+
+def resolve_resources(resources: Optional["ResourceConfig"]) -> Dict[str, Dict[str, str]]:
+    """Merge a ResourceConfig override over the platform defaults, per requests/limits."""
+    return {
+        "limits": (resources.limits if resources and resources.limits else DEFAULT_RESOURCE_LIMITS),
+        "requests": (
+            resources.requests if resources and resources.requests else DEFAULT_RESOURCE_REQUESTS
+        ),
+    }
 
 
 class ShipwrightBuildConfig(BaseModel):

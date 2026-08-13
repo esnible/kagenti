@@ -44,8 +44,6 @@ from app.core.constants import (
     WORKLOAD_TYPE_DEPLOYMENT,
     WORKLOAD_TYPE_STATEFULSET,
     DEFAULT_IN_CLUSTER_PORT,
-    DEFAULT_RESOURCE_LIMITS,
-    DEFAULT_RESOURCE_REQUESTS,
     DEFAULT_ENV_VARS,
     # Shipwright constants
     SHIPWRIGHT_CRD_GROUP,
@@ -67,6 +65,8 @@ from app.models.responses import (
 )
 from app.models.shipwright import (
     ResourceType,
+    ResourceConfig,
+    resolve_resources,
     ShipwrightBuildConfig,
     BuildSourceConfig,
     BuildOutputConfig,
@@ -186,13 +186,6 @@ class PersistentStorageConfig(BaseModel):
 
     enabled: bool = False
     size: str = "1Gi"
-
-
-class ResourceConfig(BaseModel):
-    """Container CPU/memory requests and limits, overriding the platform defaults."""
-
-    requests: Optional[Dict[str, str]] = None
-    limits: Optional[Dict[str, str]] = None
 
 
 class CreateToolRequest(BaseModel):
@@ -1212,16 +1205,6 @@ def _ensure_tool_agentruntime(
             raise
 
 
-def _resolve_tool_resources(resources: Optional["ResourceConfig"]) -> Dict[str, Dict[str, str]]:
-    """Merge tool resources overrides over the platform defaults, per requests/limits."""
-    return {
-        "limits": (resources.limits if resources and resources.limits else DEFAULT_RESOURCE_LIMITS),
-        "requests": (
-            resources.requests if resources and resources.requests else DEFAULT_RESOURCE_REQUESTS
-        ),
-    }
-
-
 def _build_tool_deployment_manifest(
     name: str,
     namespace: str,
@@ -1348,7 +1331,7 @@ def _build_tool_deployment_manifest(
                             },
                             "env": all_env_vars,
                             "ports": container_ports,
-                            "resources": _resolve_tool_resources(resources),
+                            "resources": resolve_resources(resources),
                             "volumeMounts": [
                                 {"name": "cache", "mountPath": "/app/.cache"},
                                 {"name": "tmp", "mountPath": "/tmp"},
@@ -1507,7 +1490,7 @@ def _build_tool_statefulset_manifest(
                             },
                             "env": all_env_vars,
                             "ports": container_ports,
-                            "resources": _resolve_tool_resources(resources),
+                            "resources": resolve_resources(resources),
                             "volumeMounts": [
                                 {"name": "data", "mountPath": "/data"},
                                 {"name": "cache", "mountPath": "/app/.cache"},

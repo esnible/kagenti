@@ -114,6 +114,8 @@ from app.utils.routes import (
 )
 from app.models.shipwright import (
     ResourceType,
+    ResourceConfig,
+    resolve_resources,
     ShipwrightBuildConfig,
     BuildSourceConfig,
     BuildOutputConfig,
@@ -230,13 +232,6 @@ class PersistentStorageConfig(BaseModel):
 
     enabled: bool = False
     size: str = "1Gi"
-
-
-class ResourceConfig(BaseModel):
-    """Container CPU/memory requests and limits, overriding the platform defaults."""
-
-    requests: Optional[Dict[str, str]] = None
-    limits: Optional[Dict[str, str]] = None
 
 
 class CreateAgentRequest(BaseModel):
@@ -3125,17 +3120,6 @@ def _ensure_agentruntime(
             logger.warning("Failed to create AgentRuntime '%s': %s", name, e.reason)
 
 
-def _resolve_resources(request: "CreateAgentRequest") -> Dict[str, Dict[str, str]]:
-    """Merge request.resources over the platform defaults, per requests/limits."""
-    resources = request.resources
-    return {
-        "limits": (resources.limits if resources and resources.limits else DEFAULT_RESOURCE_LIMITS),
-        "requests": (
-            resources.requests if resources and resources.requests else DEFAULT_RESOURCE_REQUESTS
-        ),
-    }
-
-
 def _build_deployment_manifest(
     request: "CreateAgentRequest",
     image: str,
@@ -3211,7 +3195,7 @@ def _build_deployment_manifest(
                             "name": "agent",
                             "image": image,
                             "imagePullPolicy": DEFAULT_IMAGE_POLICY,
-                            "resources": _resolve_resources(request),
+                            "resources": resolve_resources(request.resources),
                             "env": env_vars,
                             "ports": [
                                 {
@@ -3411,7 +3395,7 @@ def _build_statefulset_manifest(
                             "name": "agent",
                             "image": image,
                             "imagePullPolicy": DEFAULT_IMAGE_POLICY,
-                            "resources": _resolve_resources(request),
+                            "resources": resolve_resources(request.resources),
                             "env": env_vars,
                             "ports": [
                                 {
@@ -3552,7 +3536,7 @@ def _build_job_manifest(
                             "name": "agent",
                             "image": image,
                             "imagePullPolicy": DEFAULT_IMAGE_POLICY,
-                            "resources": _resolve_resources(request),
+                            "resources": resolve_resources(request.resources),
                             "env": env_vars,
                             "ports": [
                                 {
@@ -3658,7 +3642,7 @@ def _build_sandbox_manifest(
                             "name": "agent",
                             "image": image,
                             "imagePullPolicy": DEFAULT_IMAGE_POLICY,
-                            "resources": _resolve_resources(request),
+                            "resources": resolve_resources(request.resources),
                             "env": env_vars,
                             "ports": [
                                 {

@@ -14,9 +14,9 @@ Tests cover:
 import json
 import pytest
 
+from app.models.shipwright import ResourceConfig
 from app.routers.agents import (
     CreateAgentRequest,
-    ResourceConfig,
     ShipwrightBuildConfig,
     EnvVar,
     ServicePort,
@@ -30,7 +30,6 @@ from app.routers.agents import (
 )
 from app.routers.tools import (
     CreateToolRequest,
-    ResourceConfig as ToolResourceConfig,
     _build_tool_deployment_manifest,
     _build_tool_shipwright_build_manifest,
     _build_tool_statefulset_manifest,
@@ -1134,7 +1133,7 @@ class TestResourceOverridePropagation:
             name="test-tool",
             namespace="team1",
             image="registry.example.com/test-tool:v1",
-            resources=ToolResourceConfig(
+            resources=ResourceConfig(
                 requests={"cpu": "250m", "memory": "512Mi"},
                 limits={"cpu": "1", "memory": "2Gi"},
             ),
@@ -1160,7 +1159,7 @@ class TestResourceOverridePropagation:
             name="test-tool",
             namespace="team1",
             image="registry.example.com/test-tool:v1",
-            resources=ToolResourceConfig(limits={"cpu": "1", "memory": "2Gi"}),
+            resources=ResourceConfig(limits={"cpu": "1", "memory": "2Gi"}),
         )
 
         resources = manifest["spec"]["template"]["spec"]["containers"][0]["resources"]
@@ -1177,7 +1176,7 @@ class TestResourceOverridePropagation:
             framework="Python",
             gitUrl="https://github.com/example/repo",
             deploymentMethod="source",
-            resources=ToolResourceConfig(requests={"cpu": "250m", "memory": "512Mi"}),
+            resources=ResourceConfig(requests={"cpu": "250m", "memory": "512Mi"}),
         )
         manifest = _build_tool_shipwright_build_manifest(request)
 
