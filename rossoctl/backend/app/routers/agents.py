@@ -17,7 +17,7 @@ from urllib.parse import urlparse
 
 import httpx
 import yaml
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
 import kubernetes.client
 from kubernetes.client import ApiException
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -4893,6 +4893,9 @@ async def fetch_env_from_url(request: FetchEnvUrlRequest) -> FetchEnvUrlResponse
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
 
+_K8S_NAME_RE = re.compile(r"^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$")
+
+
 if settings.rossoctl_feature_flag_authbridge_api:
 
     @router.get(
@@ -4934,6 +4937,37 @@ if settings.rossoctl_feature_flag_authbridge_api:
         logger.info("Could not invoke any AuthBridge endpoints for %s/%s", namespace, name)
         # We return HTTP 200 if no pods respond - this might be a valid agent w/o AuthBridge
         return {"AuthBridge": False}
+
+    @router.put(
+        "/{namespace}/{name}/identity-config", dependencies=[Depends(require_roles(ROLE_OPERATOR))]
+    )
+    async def put_agent_identity_config(
+        namespace: str,
+        name: str,
+        new_authbridge_config_yaml: str = Body(media_type="text/plain"),
+        kube: KubernetesService = Depends(get_kubernetes_service),
+    ) -> dict:
+        """
+        Set the AuthBridge configuration for an Agent.
+        """
+
+        if not _K8S_NAME_RE.fullmatch(namespace):
+            raise HTTPException(status_code=400, detail="Invalid namespace")
+        if not _K8S_NAME_RE.fullmatch(name):
+            raise HTTPException(status_code=400, detail="Invalid name")
+
+        try:
+            yaml.safe_load(new_authbridge_config_yaml)
+        except yaml.YAMLError as e:
+            raise HTTPException(status_code=400, detail=f"Invalid YAML: {e}") from e
+
+        kube.upsert_configmap(
+            namespace=namespace,
+            name=f"authbridge-config-{name}",
+            data={"config.yaml": new_authbridge_config_yaml},
+        )
+
+        return {"status": "ok"}
 
     @router.get(
         "/{namespace}/{name}/identity-status", dependencies=[Depends(require_roles(ROLE_OPERATOR))]
