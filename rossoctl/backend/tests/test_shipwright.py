@@ -16,6 +16,7 @@ import pytest
 
 from app.routers.agents import (
     CreateAgentRequest,
+    ResourceConfig,
     ShipwrightBuildConfig,
     EnvVar,
     ServicePort,
@@ -29,7 +30,9 @@ from app.routers.agents import (
 )
 from app.routers.tools import (
     CreateToolRequest,
+    ResourceConfig as ToolResourceConfig,
     _build_tool_deployment_manifest,
+    _build_tool_shipwright_build_manifest,
     _build_tool_statefulset_manifest,
 )
 from app.core.constants import (
@@ -50,6 +53,8 @@ from app.core.constants import (
     ROSSOCTL_SPIRE_LABEL,
     ROSSOCTL_SPIRE_ENABLED_VALUE,
     RESOURCE_TYPE_AGENT,
+    DEFAULT_RESOURCE_LIMITS,
+    DEFAULT_RESOURCE_REQUESTS,
 )
 
 
@@ -1050,3 +1055,132 @@ class TestSpireLabel:
 
         pod_labels = manifest["spec"]["template"]["metadata"]["labels"]
         assert pod_labels.get(ROSSOCTL_SPIRE_LABEL) == ROSSOCTL_SPIRE_ENABLED_VALUE
+
+
+class TestResourceOverridePropagation:
+    """Verify a custom ResourceConfig actually reaches the generated container
+    resources, and falls back to platform defaults when not provided."""
+
+    def test_agent_deployment_uses_custom_resources(self):
+        request = CreateAgentRequest(
+            name="test-agent",
+            namespace="team1",
+            protocol="a2a",
+            framework="LangGraph",
+            deploymentMethod="image",
+            containerImage="registry.example.com/test-agent:v1",
+            resources=ResourceConfig(
+                requests={"cpu": "250m", "memory": "512Mi"},
+                limits={"cpu": "1", "memory": "2Gi"},
+            ),
+        )
+        manifest = _build_deployment_manifest(request, image="registry.example.com/test-agent:v1")
+
+        resources = manifest["spec"]["template"]["spec"]["containers"][0]["resources"]
+        assert resources["requests"] == {"cpu": "250m", "memory": "512Mi"}
+        assert resources["limits"] == {"cpu": "1", "memory": "2Gi"}
+
+    def test_agent_deployment_falls_back_to_defaults_without_resources(self):
+        request = CreateAgentRequest(
+            name="test-agent",
+            namespace="team1",
+            protocol="a2a",
+            framework="LangGraph",
+            deploymentMethod="image",
+            containerImage="registry.example.com/test-agent:v1",
+        )
+        manifest = _build_deployment_manifest(request, image="registry.example.com/test-agent:v1")
+
+        resources = manifest["spec"]["template"]["spec"]["containers"][0]["resources"]
+        assert resources["requests"] == DEFAULT_RESOURCE_REQUESTS
+        assert resources["limits"] == DEFAULT_RESOURCE_LIMITS
+
+    def test_agent_statefulset_uses_custom_resources(self):
+        request = CreateAgentRequest(
+            name="test-agent",
+            namespace="team1",
+            protocol="a2a",
+            framework="LangGraph",
+            deploymentMethod="image",
+            containerImage="registry.example.com/test-agent:v1",
+            workloadType="statefulset",
+            resources=ResourceConfig(requests={"cpu": "250m", "memory": "512Mi"}),
+        )
+        manifest = _build_statefulset_manifest(request, image="registry.example.com/test-agent:v1")
+
+        resources = manifest["spec"]["template"]["spec"]["containers"][0]["resources"]
+        assert resources["requests"] == {"cpu": "250m", "memory": "512Mi"}
+        assert resources["limits"] == DEFAULT_RESOURCE_LIMITS
+
+    def test_agent_shipwright_stores_resources_in_config(self):
+        """Resources must be persisted to the Build annotation so the finalize
+        endpoint can restore them when the request omits them."""
+        request = CreateAgentRequest(
+            name="test-agent",
+            namespace="team1",
+            gitUrl="https://github.com/example/repo",
+            gitPath="agents/test",
+            deploymentMethod="source",
+            resources=ResourceConfig(requests={"cpu": "250m", "memory": "512Mi"}),
+        )
+        manifest = _build_agent_shipwright_build_manifest(request)
+
+        annotations = manifest["metadata"]["annotations"]
+        config = json.loads(annotations["rossoctl.io/agent-config"])
+        assert config["resources"] == {"requests": {"cpu": "250m", "memory": "512Mi"}}
+
+    def test_tool_deployment_uses_custom_resources(self):
+        manifest = _build_tool_deployment_manifest(
+            name="test-tool",
+            namespace="team1",
+            image="registry.example.com/test-tool:v1",
+            resources=ToolResourceConfig(
+                requests={"cpu": "250m", "memory": "512Mi"},
+                limits={"cpu": "1", "memory": "2Gi"},
+            ),
+        )
+
+        resources = manifest["spec"]["template"]["spec"]["containers"][0]["resources"]
+        assert resources["requests"] == {"cpu": "250m", "memory": "512Mi"}
+        assert resources["limits"] == {"cpu": "1", "memory": "2Gi"}
+
+    def test_tool_deployment_falls_back_to_defaults_without_resources(self):
+        manifest = _build_tool_deployment_manifest(
+            name="test-tool",
+            namespace="team1",
+            image="registry.example.com/test-tool:v1",
+        )
+
+        resources = manifest["spec"]["template"]["spec"]["containers"][0]["resources"]
+        assert resources["requests"] == DEFAULT_RESOURCE_REQUESTS
+        assert resources["limits"] == DEFAULT_RESOURCE_LIMITS
+
+    def test_tool_statefulset_uses_custom_resources(self):
+        manifest = _build_tool_statefulset_manifest(
+            name="test-tool",
+            namespace="team1",
+            image="registry.example.com/test-tool:v1",
+            resources=ToolResourceConfig(limits={"cpu": "1", "memory": "2Gi"}),
+        )
+
+        resources = manifest["spec"]["template"]["spec"]["containers"][0]["resources"]
+        assert resources["requests"] == DEFAULT_RESOURCE_REQUESTS
+        assert resources["limits"] == {"cpu": "1", "memory": "2Gi"}
+
+    def test_tool_shipwright_stores_resources_in_config(self):
+        """Resources must be persisted to the Build annotation so the tool
+        finalize endpoint can restore them when the request omits them."""
+        request = CreateToolRequest(
+            name="test-tool",
+            namespace="team1",
+            protocol="streamable_http",
+            framework="Python",
+            gitUrl="https://github.com/example/repo",
+            deploymentMethod="source",
+            resources=ToolResourceConfig(requests={"cpu": "250m", "memory": "512Mi"}),
+        )
+        manifest = _build_tool_shipwright_build_manifest(request)
+
+        annotations = manifest["metadata"]["annotations"]
+        config = json.loads(annotations["rossoctl.io/tool-config"])
+        assert config["resources"] == {"requests": {"cpu": "250m", "memory": "512Mi"}}

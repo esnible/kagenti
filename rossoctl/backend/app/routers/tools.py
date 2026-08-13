@@ -281,6 +281,7 @@ class FinalizeToolBuildRequest(BaseModel):
     outboundPortsExclude: Optional[str] = None
     inboundPortsExclude: Optional[str] = None
     defaultOutboundPolicy: Optional[Literal["passthrough", "exchange"]] = None
+    resources: Optional[ResourceConfig] = None
 
 
 class ToolShipwrightBuildInfoResponse(BaseModel):  # pylint: disable=too-many-instance-attributes
@@ -655,6 +656,8 @@ def _build_tool_shipwright_build_manifest(
     # Add persistent storage config if present (for StatefulSet)
     if request.persistentStorage:
         resource_config["persistentStorage"] = request.persistentStorage.model_dump()
+    if request.resources:
+        resource_config["resources"] = request.resources.model_dump(exclude_none=True)
     # Add env vars if present
     if request.envVars:
         resource_config["envVars"] = [ev.model_dump() for ev in request.envVars]
@@ -2205,6 +2208,9 @@ async def finalize_tool_shipwright_build(
             if request.defaultOutboundPolicy is not None
             else tool_config_dict.get("defaultOutboundPolicy")
         )
+        final_resources = request.resources
+        if final_resources is None and tool_config_dict.get("resources"):
+            final_resources = ResourceConfig(**tool_config_dict["resources"])
 
         # Ensure a dedicated ServiceAccount exists so the webhook's
         # SPIFFE identity uses the workload name, not the ReplicaSet hash.
@@ -2258,6 +2264,7 @@ async def finalize_tool_shipwright_build(
                 outbound_ports_exclude=outbound_ports_exclude,
                 inbound_ports_exclude=inbound_ports_exclude,
                 auth_bridge_mode=auth_bridge_mode,
+                resources=final_resources,
             )
             kube.create_statefulset(namespace, workload_manifest)
             logger.info(
@@ -2281,6 +2288,7 @@ async def finalize_tool_shipwright_build(
                 outbound_ports_exclude=outbound_ports_exclude,
                 inbound_ports_exclude=inbound_ports_exclude,
                 auth_bridge_mode=auth_bridge_mode,
+                resources=final_resources,
             )
             kube.create_deployment(namespace, workload_manifest)
             logger.info(

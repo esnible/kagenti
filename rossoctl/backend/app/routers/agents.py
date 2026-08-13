@@ -2612,6 +2612,8 @@ def _build_agent_shipwright_build_manifest(
         resource_config["tlsBridgeEnabled"] = True
     if request.persistentStorage:
         resource_config["persistentStorage"] = request.persistentStorage.model_dump()
+    if request.resources:
+        resource_config["resources"] = request.resources.model_dump(exclude_none=True)
     # Add env vars if present
     if request.envVars:
         resource_config["envVars"] = [ev.model_dump(exclude_none=True) for ev in request.envVars]
@@ -4083,6 +4085,7 @@ class FinalizeShipwrightBuildRequest(BaseModel):
     outboundPortsExclude: Optional[str] = None
     inboundPortsExclude: Optional[str] = None
     defaultOutboundPolicy: Optional[Literal["passthrough", "exchange"]] = None
+    resources: Optional[ResourceConfig] = None
     persistentStorage: Optional[PersistentStorageConfig] = None
     mcpToolName: Optional[str] = None
     llmPreset: Optional[str] = None
@@ -4417,6 +4420,10 @@ async def finalize_shipwright_build(
         if final_persistent_storage is None and stored_config.get("persistentStorage"):
             final_persistent_storage = PersistentStorageConfig(**stored_config["persistentStorage"])
 
+        final_resources = request.resources
+        if final_resources is None and stored_config.get("resources"):
+            final_resources = ResourceConfig(**stored_config["resources"])
+
         final_mcp_tool_name = (
             request.mcpToolName
             if request.mcpToolName is not None
@@ -4454,6 +4461,7 @@ async def finalize_shipwright_build(
             inboundPortsExclude=final_inbound_ports_exclude,
             defaultOutboundPolicy=final_default_outbound_policy,
             persistentStorage=final_persistent_storage,
+            resources=final_resources,
             gitPath=stored_config.get("gitPath")
             or build.get("spec", {}).get("source", {}).get("contextDir", ""),
             mcpToolName=final_mcp_tool_name,
