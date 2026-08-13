@@ -84,12 +84,12 @@ type DeleteResponse struct {
 
 // DashboardConfigResponse holds dashboard URLs.
 type DashboardConfigResponse struct {
-	Traces         string `json:"traces"`
-	Network        string `json:"network"`
-	MCPInspector   string `json:"mcpInspector"`
-	MCPProxy       string `json:"mcpProxy"`
+	Traces          string `json:"traces"`
+	Network         string `json:"network"`
+	MCPInspector    string `json:"mcpInspector"`
+	MCPProxy        string `json:"mcpProxy"`
 	KeycloakConsole string `json:"keycloakConsole"`
-	DomainName     string `json:"domainName"`
+	DomainName      string `json:"domainName"`
 }
 
 // AuthConfigResponse is the auth configuration from the backend.
@@ -191,26 +191,32 @@ type PersistentStorageConfig struct {
 	Size    string `json:"size"`
 }
 
+// ResourceConfig overrides the platform's default container CPU/memory requests and limits.
+type ResourceConfig struct {
+	Requests map[string]string `json:"requests,omitempty"`
+	Limits   map[string]string `json:"limits,omitempty"`
+}
+
 // CreateAgentRequest is the request to create an agent.
 type CreateAgentRequest struct {
-	Name              string                   `json:"name"`
-	Namespace         string                   `json:"namespace"`
-	Protocol          string                   `json:"protocol"`
-	Framework         string                   `json:"framework"`
-	DeploymentMethod  string                   `json:"deploymentMethod"`
-	WorkloadType      string                   `json:"workloadType"`
-	EnvVars           []EnvVar                 `json:"envVars,omitempty"`
-	GitURL            string                   `json:"gitUrl,omitempty"`
-	GitPath           string                   `json:"gitPath,omitempty"`
-	GitBranch         string                   `json:"gitBranch,omitempty"`
-	ImageTag          string                   `json:"imageTag,omitempty"`
-	ContainerImage    string                   `json:"containerImage,omitempty"`
-	ImagePullSecret   string                   `json:"imagePullSecret,omitempty"`
-	ServicePorts      []ServicePort            `json:"servicePorts,omitempty"`
-	CreateHTTPRoute   bool                     `json:"createHttpRoute"`
-	AuthBridgeEnabled bool                     `json:"authBridgeEnabled"`
-	SpireEnabled      bool                     `json:"spireEnabled"`
-	AuthBridgeMode    string                   `json:"authBridgeMode,omitempty"`
+	Name              string        `json:"name"`
+	Namespace         string        `json:"namespace"`
+	Protocol          string        `json:"protocol"`
+	Framework         string        `json:"framework"`
+	DeploymentMethod  string        `json:"deploymentMethod"`
+	WorkloadType      string        `json:"workloadType"`
+	EnvVars           []EnvVar      `json:"envVars,omitempty"`
+	GitURL            string        `json:"gitUrl,omitempty"`
+	GitPath           string        `json:"gitPath,omitempty"`
+	GitBranch         string        `json:"gitBranch,omitempty"`
+	ImageTag          string        `json:"imageTag,omitempty"`
+	ContainerImage    string        `json:"containerImage,omitempty"`
+	ImagePullSecret   string        `json:"imagePullSecret,omitempty"`
+	ServicePorts      []ServicePort `json:"servicePorts,omitempty"`
+	CreateHTTPRoute   bool          `json:"createHttpRoute"`
+	AuthBridgeEnabled bool          `json:"authBridgeEnabled"`
+	SpireEnabled      bool          `json:"spireEnabled"`
+	AuthBridgeMode    string        `json:"authBridgeMode,omitempty"`
 	// MTLSMode maps to AgentRuntime.Spec.MTLSMode. Backend rejects
 	// non-disabled values when AuthBridgeMode is "envoy-sidecar"
 	// (Envoy SDS not currently configured by the rossoctl chart).
@@ -219,6 +225,7 @@ type CreateAgentRequest struct {
 	// kubectl-style or future-CLI usage paths don't drop the field.
 	MTLSMode          string                   `json:"mtlsMode,omitempty"`
 	PersistentStorage *PersistentStorageConfig `json:"persistentStorage,omitempty"`
+	Resources         *ResourceConfig          `json:"resources,omitempty"`
 }
 
 // CreateAgentResponse is the response after creating an agent.
@@ -231,29 +238,30 @@ type CreateAgentResponse struct {
 
 // CreateToolRequest is the request to create a tool.
 type CreateToolRequest struct {
-	Name             string        `json:"name"`
-	Namespace        string        `json:"namespace"`
-	Protocol         string        `json:"protocol"`
-	Framework        string        `json:"framework"`
-	Description      string        `json:"description,omitempty"`
-	DeploymentMethod string        `json:"deploymentMethod"`
-	WorkloadType     string        `json:"workloadType"`
-	EnvVars          []EnvVar      `json:"envVars,omitempty"`
-	ContainerImage   string        `json:"containerImage,omitempty"`
-	ImagePullSecret  string        `json:"imagePullSecret,omitempty"`
-	GitURL           string        `json:"gitUrl,omitempty"`
-	GitRevision      string        `json:"gitRevision,omitempty"`
-	ContextDir       string        `json:"contextDir,omitempty"`
-	ImageTag         string        `json:"imageTag,omitempty"`
-	ServicePorts     []ServicePort `json:"servicePorts,omitempty"`
-	CreateHTTPRoute  bool          `json:"createHttpRoute"`
-	AuthBridgeEnabled bool         `json:"authBridgeEnabled"`
-	SpireEnabled     bool          `json:"spireEnabled"`
+	Name              string        `json:"name"`
+	Namespace         string        `json:"namespace"`
+	Protocol          string        `json:"protocol"`
+	Framework         string        `json:"framework"`
+	Description       string        `json:"description,omitempty"`
+	DeploymentMethod  string        `json:"deploymentMethod"`
+	WorkloadType      string        `json:"workloadType"`
+	EnvVars           []EnvVar      `json:"envVars,omitempty"`
+	ContainerImage    string        `json:"containerImage,omitempty"`
+	ImagePullSecret   string        `json:"imagePullSecret,omitempty"`
+	GitURL            string        `json:"gitUrl,omitempty"`
+	GitRevision       string        `json:"gitRevision,omitempty"`
+	ContextDir        string        `json:"contextDir,omitempty"`
+	ImageTag          string        `json:"imageTag,omitempty"`
+	ServicePorts      []ServicePort `json:"servicePorts,omitempty"`
+	CreateHTTPRoute   bool          `json:"createHttpRoute"`
+	AuthBridgeEnabled bool          `json:"authBridgeEnabled"`
+	SpireEnabled      bool          `json:"spireEnabled"`
 	// AuthBridgeMode maps to AgentRuntime.Spec.AuthBridgeMode for
 	// agents (the deprecated rossoctl.io/authbridge-mode annotation
 	// for tools). Valid values: "proxy-sidecar" (default),
 	// "envoy-sidecar", "lite", "waypoint". Empty = cluster default.
-	AuthBridgeMode string `json:"authBridgeMode,omitempty"`
+	AuthBridgeMode string          `json:"authBridgeMode,omitempty"`
+	Resources      *ResourceConfig `json:"resources,omitempty"`
 }
 
 // CreateToolResponse is the response after creating a tool.

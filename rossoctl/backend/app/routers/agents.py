@@ -232,6 +232,13 @@ class PersistentStorageConfig(BaseModel):
     size: str = "1Gi"
 
 
+class ResourceConfig(BaseModel):
+    """Container CPU/memory requests and limits, overriding the platform defaults."""
+
+    requests: Optional[Dict[str, str]] = None
+    limits: Optional[Dict[str, str]] = None
+
+
 class CreateAgentRequest(BaseModel):
     """Request to create a new agent."""
 
@@ -318,6 +325,9 @@ class CreateAgentRequest(BaseModel):
 
     # Persistent storage (for Sandbox and StatefulSet workloads)
     persistentStorage: Optional[PersistentStorageConfig] = None
+
+    # CPU/memory requests and limits, overriding DEFAULT_RESOURCE_REQUESTS/LIMITS
+    resources: Optional[ResourceConfig] = None
 
     # Shipwright build configuration
     shipwrightConfig: Optional[ShipwrightBuildConfig] = None
@@ -3113,6 +3123,17 @@ def _ensure_agentruntime(
             logger.warning("Failed to create AgentRuntime '%s': %s", name, e.reason)
 
 
+def _resolve_resources(request: "CreateAgentRequest") -> Dict[str, Dict[str, str]]:
+    """Merge request.resources over the platform defaults, per requests/limits."""
+    resources = request.resources
+    return {
+        "limits": (resources.limits if resources and resources.limits else DEFAULT_RESOURCE_LIMITS),
+        "requests": (
+            resources.requests if resources and resources.requests else DEFAULT_RESOURCE_REQUESTS
+        ),
+    }
+
+
 def _build_deployment_manifest(
     request: "CreateAgentRequest",
     image: str,
@@ -3188,10 +3209,7 @@ def _build_deployment_manifest(
                             "name": "agent",
                             "image": image,
                             "imagePullPolicy": DEFAULT_IMAGE_POLICY,
-                            "resources": {
-                                "limits": DEFAULT_RESOURCE_LIMITS,
-                                "requests": DEFAULT_RESOURCE_REQUESTS,
-                            },
+                            "resources": _resolve_resources(request),
                             "env": env_vars,
                             "ports": [
                                 {
@@ -3391,10 +3409,7 @@ def _build_statefulset_manifest(
                             "name": "agent",
                             "image": image,
                             "imagePullPolicy": DEFAULT_IMAGE_POLICY,
-                            "resources": {
-                                "limits": DEFAULT_RESOURCE_LIMITS,
-                                "requests": DEFAULT_RESOURCE_REQUESTS,
-                            },
+                            "resources": _resolve_resources(request),
                             "env": env_vars,
                             "ports": [
                                 {
@@ -3535,10 +3550,7 @@ def _build_job_manifest(
                             "name": "agent",
                             "image": image,
                             "imagePullPolicy": DEFAULT_IMAGE_POLICY,
-                            "resources": {
-                                "limits": DEFAULT_RESOURCE_LIMITS,
-                                "requests": DEFAULT_RESOURCE_REQUESTS,
-                            },
+                            "resources": _resolve_resources(request),
                             "env": env_vars,
                             "ports": [
                                 {
@@ -3644,10 +3656,7 @@ def _build_sandbox_manifest(
                             "name": "agent",
                             "image": image,
                             "imagePullPolicy": DEFAULT_IMAGE_POLICY,
-                            "resources": {
-                                "limits": DEFAULT_RESOURCE_LIMITS,
-                                "requests": DEFAULT_RESOURCE_REQUESTS,
-                            },
+                            "resources": _resolve_resources(request),
                             "env": env_vars,
                             "ports": [
                                 {

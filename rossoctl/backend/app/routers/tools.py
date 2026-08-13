@@ -188,6 +188,13 @@ class PersistentStorageConfig(BaseModel):
     size: str = "1Gi"
 
 
+class ResourceConfig(BaseModel):
+    """Container CPU/memory requests and limits, overriding the platform defaults."""
+
+    requests: Optional[Dict[str, str]] = None
+    limits: Optional[Dict[str, str]] = None
+
+
 class CreateToolRequest(BaseModel):
     """Request to create a new MCP tool.
 
@@ -252,6 +259,9 @@ class CreateToolRequest(BaseModel):
 
     # Outbound routing rules (authproxy-routes ConfigMap)
     outboundRoutes: Optional[List["OutboundRoute"]] = None
+
+    # CPU/memory requests and limits, overriding DEFAULT_RESOURCE_REQUESTS/LIMITS
+    resources: Optional[ResourceConfig] = None
 
 
 class FinalizeToolBuildRequest(BaseModel):
@@ -1199,6 +1209,16 @@ def _ensure_tool_agentruntime(
             raise
 
 
+def _resolve_tool_resources(resources: Optional["ResourceConfig"]) -> Dict[str, Dict[str, str]]:
+    """Merge tool resources overrides over the platform defaults, per requests/limits."""
+    return {
+        "limits": (resources.limits if resources and resources.limits else DEFAULT_RESOURCE_LIMITS),
+        "requests": (
+            resources.requests if resources and resources.requests else DEFAULT_RESOURCE_REQUESTS
+        ),
+    }
+
+
 def _build_tool_deployment_manifest(
     name: str,
     namespace: str,
@@ -1215,6 +1235,7 @@ def _build_tool_deployment_manifest(
     outbound_ports_exclude: Optional[str] = None,
     inbound_ports_exclude: Optional[str] = None,
     auth_bridge_mode: Optional[str] = None,
+    resources: Optional["ResourceConfig"] = None,
 ) -> dict:
     """
     Build a Kubernetes Deployment manifest for an MCP tool.
@@ -1324,10 +1345,7 @@ def _build_tool_deployment_manifest(
                             },
                             "env": all_env_vars,
                             "ports": container_ports,
-                            "resources": {
-                                "limits": DEFAULT_RESOURCE_LIMITS,
-                                "requests": DEFAULT_RESOURCE_REQUESTS,
-                            },
+                            "resources": _resolve_tool_resources(resources),
                             "volumeMounts": [
                                 {"name": "cache", "mountPath": "/app/.cache"},
                                 {"name": "tmp", "mountPath": "/tmp"},
@@ -1371,6 +1389,7 @@ def _build_tool_statefulset_manifest(
     outbound_ports_exclude: Optional[str] = None,
     inbound_ports_exclude: Optional[str] = None,
     auth_bridge_mode: Optional[str] = None,
+    resources: Optional["ResourceConfig"] = None,
 ) -> dict:
     """
     Build a Kubernetes StatefulSet manifest for an MCP tool.
@@ -1485,10 +1504,7 @@ def _build_tool_statefulset_manifest(
                             },
                             "env": all_env_vars,
                             "ports": container_ports,
-                            "resources": {
-                                "limits": DEFAULT_RESOURCE_LIMITS,
-                                "requests": DEFAULT_RESOURCE_REQUESTS,
-                            },
+                            "resources": _resolve_tool_resources(resources),
                             "volumeMounts": [
                                 {"name": "data", "mountPath": "/data"},
                                 {"name": "cache", "mountPath": "/app/.cache"},
@@ -1751,6 +1767,7 @@ async def create_tool(
                     outbound_ports_exclude=request.outboundPortsExclude,
                     inbound_ports_exclude=request.inboundPortsExclude,
                     auth_bridge_mode=request.authBridgeMode,
+                    resources=request.resources,
                 )
                 kube.create_statefulset(request.namespace, workload_manifest)
                 created.append(("StatefulSet", request.name))
@@ -1774,6 +1791,7 @@ async def create_tool(
                     outbound_ports_exclude=request.outboundPortsExclude,
                     inbound_ports_exclude=request.inboundPortsExclude,
                     auth_bridge_mode=request.authBridgeMode,
+                    resources=request.resources,
                 )
                 kube.create_deployment(request.namespace, workload_manifest)
                 created.append(("Deployment", request.name))
