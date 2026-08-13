@@ -1221,7 +1221,7 @@ def _build_tool_deployment_manifest(
     outbound_ports_exclude: Optional[str] = None,
     inbound_ports_exclude: Optional[str] = None,
     auth_bridge_mode: Optional[str] = None,
-    resources: Optional["ResourceConfig"] = None,
+    resources: Optional[ResourceConfig] = None,
 ) -> dict:
     """
     Build a Kubernetes Deployment manifest for an MCP tool.
@@ -1375,7 +1375,7 @@ def _build_tool_statefulset_manifest(
     outbound_ports_exclude: Optional[str] = None,
     inbound_ports_exclude: Optional[str] = None,
     auth_bridge_mode: Optional[str] = None,
-    resources: Optional["ResourceConfig"] = None,
+    resources: Optional[ResourceConfig] = None,
 ) -> dict:
     """
     Build a Kubernetes StatefulSet manifest for an MCP tool.
