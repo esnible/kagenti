@@ -37,7 +37,7 @@ class ResourceConfig(BaseModel):
     limits: Optional[Dict[str, str]] = None
 
 
-def resolve_resources(resources: Optional["ResourceConfig"]) -> Dict[str, Dict[str, str]]:
+def resolve_resources(resources: Optional[ResourceConfig]) -> Dict[str, Dict[str, str]]:
     """Merge a ResourceConfig override over the platform defaults, per requests/limits."""
     return {
         "limits": (resources.limits if resources and resources.limits else DEFAULT_RESOURCE_LIMITS),
