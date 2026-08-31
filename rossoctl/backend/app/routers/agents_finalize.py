@@ -51,6 +51,7 @@ from app.routers.agents_manifests import (
     _build_sandbox_manifest,
     _build_service_manifest,
     _build_statefulset_manifest,
+    _carryover_workload_labels,
     _create_or_replace_service,
     _ensure_agentruntime,
     _record_contexts,
@@ -501,14 +502,14 @@ async def finalize_shipwright_build(
                 ext_skill_paths=build_ext_skill_paths,
             )
             _record_contexts(workload_manifest, resolved_contexts)
-            # Add additional labels from Build
-            workload_manifest["metadata"]["labels"].update(
-                {k: v for k, v in build_labels.items() if k.startswith("rossoctl.io/")}
-            )
+            # Carry forward build-time rossoctl.io/* labels, minus rossoctl.io/type
+            # (the operator sets that via the AgentRuntime CR below; a raw
+            # Deployment carrying it is rejected by the agent-label-protection
+            # policy -- issue #2489).
+            carryover_labels = _carryover_workload_labels(build_labels)
+            workload_manifest["metadata"]["labels"].update(carryover_labels)
             # Also update pod template labels
-            workload_manifest["spec"]["template"]["metadata"]["labels"].update(
-                {k: v for k, v in build_labels.items() if k.startswith("rossoctl.io/")}
-            )
+            workload_manifest["spec"]["template"]["metadata"]["labels"].update(carryover_labels)
             kube.create_deployment(namespace=namespace, body=workload_manifest)
             logger.info(
                 f"Created Deployment '{name}' with image '{container_image}' in namespace '{namespace}'"
@@ -525,14 +526,12 @@ async def finalize_shipwright_build(
                 ext_skill_paths=build_ext_skill_paths,
             )
             _record_contexts(workload_manifest, resolved_contexts)
-            # Add additional labels from Build
-            workload_manifest["metadata"]["labels"].update(
-                {k: v for k, v in build_labels.items() if k.startswith("rossoctl.io/")}
-            )
+            # Carry forward build-time rossoctl.io/* labels, minus rossoctl.io/type
+            # (see the Deployment branch above -- issue #2489).
+            carryover_labels = _carryover_workload_labels(build_labels)
+            workload_manifest["metadata"]["labels"].update(carryover_labels)
             # Also update pod template labels
-            workload_manifest["spec"]["template"]["metadata"]["labels"].update(
-                {k: v for k, v in build_labels.items() if k.startswith("rossoctl.io/")}
-            )
+            workload_manifest["spec"]["template"]["metadata"]["labels"].update(carryover_labels)
             kube.create_statefulset(namespace=namespace, body=workload_manifest)
             logger.info(
                 f"Created StatefulSet '{name}' with image '{container_image}' in namespace '{namespace}'"
@@ -549,14 +548,14 @@ async def finalize_shipwright_build(
                 ext_skill_paths=build_ext_skill_paths,
             )
             _record_contexts(workload_manifest, resolved_contexts)
-            # Add additional labels from Build
-            workload_manifest["metadata"]["labels"].update(
-                {k: v for k, v in build_labels.items() if k.startswith("rossoctl.io/")}
-            )
+            # Carry forward build-time rossoctl.io/* labels, minus rossoctl.io/type.
+            # A Job isn't matched by the agent-label-protection policy (deployments
+            # /statefulsets only), but we keep the same rule for consistency and to
+            # avoid stamping a label the operator owns -- issue #2489.
+            carryover_labels = _carryover_workload_labels(build_labels)
+            workload_manifest["metadata"]["labels"].update(carryover_labels)
             # Also update pod template labels
-            workload_manifest["spec"]["template"]["metadata"]["labels"].update(
-                {k: v for k, v in build_labels.items() if k.startswith("rossoctl.io/")}
-            )
+            workload_manifest["spec"]["template"]["metadata"]["labels"].update(carryover_labels)
             kube.create_job(namespace=namespace, body=workload_manifest)
             logger.info(
                 f"Created Job '{name}' with image '{container_image}' in namespace '{namespace}'"
