@@ -191,9 +191,7 @@ def _carryover_workload_labels(build_labels: Dict[str, str]) -> Dict[str, str]:
     """
     prefix = settings.rossoctl_label_prefix
     return {
-        k: v
-        for k, v in build_labels.items()
-        if k.startswith(prefix) and k != ROSSOCTL_TYPE_LABEL
+        k: v for k, v in build_labels.items() if k.startswith(prefix) and k != ROSSOCTL_TYPE_LABEL
     }
 
 
