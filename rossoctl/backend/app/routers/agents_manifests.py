@@ -257,6 +257,9 @@ def _build_agentruntime_manifest(
     auth_bridge_mode: Optional[str] = None,
     mtls_mode: Optional[str] = None,
     tls_bridge_enabled: bool = False,
+    plugin_preset: Optional[str] = None,
+    plugins: Optional[List[str]] = None,
+    on_error: Optional[str] = None,
 ) -> dict:
     """Build an AgentRuntime CR manifest for the given workload."""
     kind_map = {
@@ -286,6 +289,16 @@ def _build_agentruntime_manifest(
     # CRD field off envoy-sidecar agents so the validating webhook doesn't reject).
     if tls_bridge_enabled:
         spec["tlsBridgeMode"] = "enabled"
+    # AuthBridge layer-3 plugin composition. Only set when a preset is chosen;
+    # unset → operator keeps its default 2-plugin pipeline (jwt-validation +
+    # token-exchange), so existing agents are unaffected. plugins/onError are
+    # only meaningful alongside a preset (they refine the selected pipeline).
+    if plugin_preset:
+        spec["pluginPreset"] = plugin_preset
+        if plugins:
+            spec["plugins"] = plugins
+        if on_error:
+            spec["onError"] = on_error
     return {
         "apiVersion": f"{CRD_GROUP}/{CRD_VERSION}",
         "kind": "AgentRuntime",
@@ -310,6 +323,9 @@ def _ensure_agentruntime(
     auth_bridge_mode: Optional[str] = None,
     mtls_mode: Optional[str] = None,
     tls_bridge_enabled: bool = False,
+    plugin_preset: Optional[str] = None,
+    plugins: Optional[List[str]] = None,
+    on_error: Optional[str] = None,
 ) -> None:
     """Create an AgentRuntime CR for the workload. Skip if it already exists."""
     manifest = _build_agentruntime_manifest(
@@ -320,6 +336,9 @@ def _ensure_agentruntime(
         auth_bridge_mode,
         mtls_mode,
         tls_bridge_enabled,
+        plugin_preset,
+        plugins,
+        on_error,
     )
     try:
         kube.create_custom_resource(
@@ -940,10 +959,12 @@ async def _resolve_context_mounts(
             status_code=400,
             detail="context attachments require a statefulset or sandbox workload",
         )
-    if not settings.context_service_url.strip():
-        raise HTTPException(status_code=400, detail="Context Service integration is disabled")
+    from app.routers.contexts import (  # pylint: disable=import-outside-toplevel
+        require_context_service,
+        resolve_context,
+    )
 
-    from app.routers.contexts import resolve_context  # pylint: disable=import-outside-toplevel
+    require_context_service()
 
     volumes: List[Dict[str, Any]] = []
     mounts: List[Dict[str, Any]] = []
