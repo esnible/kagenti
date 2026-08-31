@@ -63,3 +63,18 @@ def test_non_rossoctl_labels_excluded():
 def test_empty_build_labels():
     """Empty in -> empty out, no crash."""
     assert _carryover_workload_labels({}) == {}
+
+
+def test_finalize_request_has_contexts_field():
+    """finalize_shipwright_build reads request.contexts unconditionally.
+
+    The finalize model must carry the field or that access raises
+    AttributeError -> 500 before any workload is created, blocking every
+    Deployment/StatefulSet/Job finalize (issue #2489). Defaults to None so the
+    stored-config fallback kicks in.
+    """
+    from app.routers.agents import FinalizeShipwrightBuildRequest
+
+    req = FinalizeShipwrightBuildRequest()
+    # Access mirrors line ~398 of agents_finalize.py; must not raise.
+    assert req.contexts is None
