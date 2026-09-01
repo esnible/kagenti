@@ -178,6 +178,23 @@ def _build_common_labels(
     return labels
 
 
+def _carryover_workload_labels(build_labels: Dict[str, str]) -> Dict[str, str]:
+    """rossoctl.io/* labels to copy from a Shipwright Build onto a raw workload
+    (Deployment/StatefulSet/Job) in the finalize path.
+
+    Excludes rossoctl.io/type: the agent-label-protection
+    ValidatingAdmissionPolicy only lets the rossoctl-operator set that label
+    (via AgentRuntime reconciliation), so copying it onto a raw Deployment is
+    rejected with a 403 (issue #2489). The operator stamps it afterwards from
+    the AgentRuntime CR. Mirrors _build_common_labels, which omits the label
+    for the same reason.
+    """
+    prefix = settings.rossoctl_label_prefix
+    return {
+        k: v for k, v in build_labels.items() if k.startswith(prefix) and k != ROSSOCTL_TYPE_LABEL
+    }
+
+
 def _build_common_annotations(request: "CreateAgentRequest") -> Dict[str, str]:
     """Build pod template annotations for port exclusions and other webhook directives."""
     annotations: Dict[str, str] = {}

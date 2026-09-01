@@ -431,6 +431,12 @@ class FinalizeShipwrightBuildRequest(BaseModel):
     # so a build-from-source agent gets the same resources as a direct-image one.
     k8sResourceLimits: Optional[Dict[str, str]] = None
     k8sResourceRequests: Optional[Dict[str, str]] = None
+    # Mirrors CreateAgentRequest.contexts. Must exist here because
+    # finalize_shipwright_build reads request.contexts unconditionally; without
+    # the field, every Deployment/StatefulSet/Job finalize raised AttributeError
+    # -> 500 before any workload was created (issue #2489). None → inherit the
+    # value stashed on the BuildRun annotation at form-submit time.
+    contexts: Optional[List[ContextAttachment]] = None
 
     @model_validator(mode="after")
     def _check_mtls_compatible_with_mode(self) -> "FinalizeShipwrightBuildRequest":
