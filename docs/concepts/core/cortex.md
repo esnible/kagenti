@@ -16,6 +16,16 @@ lowers your token usage and your cost.
 
 ## What you get
 
+Think of the viewer as `top` for your coding agent. Where `top` shows which processes are eating
+your CPU, `abctl observe` shows which agent sessions are eating your tokens, your context window
+and your money — live, as they run.
+
+| `top` shows you | `abctl observe` shows you |
+|---|---|
+| Processes | Agent sessions |
+| CPU and memory | Tokens, cost and remaining context |
+| Per-process detail | Per-session, then per-request detail |
+
 - **See every call the agent makes.** Model calls, tool calls (MCP) and agent-to-agent messages,
   parsed as they happen.
 - **Token and cost numbers for each session.** For each model call, the input, cache-read, cache-write
@@ -41,10 +51,22 @@ goes with it.
 ## Install it
 
 You can run RossoCortex on macOS or Linux and watch your agent's traffic in about 5 minutes. You do
-not need a Kubernetes cluster. See [Quickstart on a laptop](../../get-started/laptop.md).
+not need a Kubernetes cluster. See [Quickstart on a laptop](../../get-started/laptop.md) for the
+step-by-step instructions, or the
+[repository README](https://github.com/rossoctl/cortex/blob/main/README.md) for the short version.
 
-Tried it? Tell us what worked and what did not, with the **Laptop feedback** form on
-[rossoctl/cortex](https://github.com/rossoctl/cortex/issues/new/choose).
+## Give feedback
+
+:::info[Tell us when it breaks]
+
+RossoCortex on a laptop is new. If the install failed, the numbers looked wrong, or anything was
+unclear, we want to hear it.
+
+- Open the **Laptop feedback** form on
+  [rossoctl/cortex](https://github.com/rossoctl/cortex/issues/new/choose)
+- Or write a message in [Slack](https://ibm.biz/rossoctl-slack)
+
+:::
 
 ## How it works
 

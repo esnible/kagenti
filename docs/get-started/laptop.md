@@ -22,6 +22,10 @@ You need:
 
 ## Step 1: install the program
 
+<!-- This install command is duplicated in the Cortex repository README:
+     rossoctl/cortex -> README.md ("Quick start").
+     Change both, or they drift - the --ref wording already did once. -->
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/rossoctl/cortex/main/authbridge/install.sh \
   | sh -s -- --claude-code
@@ -31,10 +35,14 @@ The script asks for your permission before it changes the settings of Claude Cod
 RossoCortex as a background service. The service restarts after a failure and after you sign in again.
 
 :::note
-The address of the script is on the `main` branch. The script then runs the copy from the most recent
-release. The command therefore does not run unreleased code. To select a different version, use the
-`--ref` option.
+The address of the script is on the `main` branch, but the script then runs the copy from the most
+recent release, so the command does not run unreleased code. To pin or override that, use `--ref`:
+`--ref=vX.Y.Z` selects a release and `--ref=main` installs the unreleased tip. See
+[Installing an unreleased build](https://github.com/rossoctl/cortex/blob/main/CONTRIBUTING.md#installing-an-unreleased-build).
 :::
+
+If the install fails, skip ahead to [Give feedback](#give-feedback) — a pasted error is exactly what
+we need.
 
 ## Step 2: watch the traffic
 
@@ -111,7 +119,16 @@ See [Install the cluster CLI](cli.md).
 
 ## Give feedback
 
-Cortex on a laptop is new. If something did not work, or the install was not clear, tell us. Open the
-**Laptop feedback** form on
-[rossoctl/cortex](https://github.com/rossoctl/cortex/issues/new/choose), or write a message in
-[Slack](https://ibm.biz/rossoctl-slack).
+:::info[Tell us when it breaks]
+
+Cortex on a laptop is new. If the install failed, the numbers looked wrong, or anything was unclear,
+we want to hear it.
+
+- Open the **Laptop feedback** form on
+  [rossoctl/cortex](https://github.com/rossoctl/cortex/issues/new/choose)
+- Or write a message in [Slack](https://ibm.biz/rossoctl-slack)
+
+A half-finished install with the error pasted in is more useful to us than a polished bug report you
+never sent.
+
+:::
