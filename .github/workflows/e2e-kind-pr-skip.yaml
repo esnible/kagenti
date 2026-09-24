@@ -1,0 +1,48 @@
+name: E2E K8s 1.35.0 (Kind PR - Skip)
+
+# Companion to e2e-kind-pr.yaml.
+#
+# "Deploy & Test" is a required status check on main. Because e2e-kind-pr.yaml
+# uses paths: filtering, it never triggers on docs-only PRs, so the required
+# check never reports and GitHub blocks the merge on a missing check.
+#
+# This workflow reports the same check name as a no-op success for PRs that
+# touch none of the paths e2e-kind-pr.yaml cares about. Exactly one of the two
+# workflows runs for any given PR, so the check always reports and never
+# double-reports.
+#
+# IMPORTANT: paths-ignore: here MUST stay the exact inverse of paths: in
+# e2e-kind-pr.yaml. If you add a path there, add it here too, or docs-only PRs
+# will hang on a missing check again.
+
+on:
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - 'rossoctl/**'
+      - 'deployments/**'
+      - '.github/**'
+      - 'charts/**'
+      - 'scripts/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - 'rossoctl/ui-v2/package.json'
+      - 'rossoctl/ui-v2/package-lock.json'
+
+concurrency:
+  group: e2e-kind-pr-skip-${{ github.head_ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  e2e-dev-rossoctl-operator:
+    name: Deploy & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Skip E2E (no deployable paths changed)
+        run: |
+          echo "No changes under the paths e2e-kind-pr.yaml watches."
+          echo "Reporting 'Deploy & Test' as a no-op success so the required check is satisfied."
