@@ -41,8 +41,10 @@ recent release, so the command does not run unreleased code. To pin or override 
 [Installing an unreleased build](https://github.com/rossoctl/cortex/blob/main/CONTRIBUTING.md#installing-an-unreleased-build).
 :::
 
-If the install fails, skip ahead to [Give feedback](#give-feedback) — a pasted error is exactly what
-we need.
+If the install fails, read [Troubleshooting](../operate/troubleshooting.md#on-a-laptop) first. It
+covers a certificate that your agent does not trust, a port that another program holds, and a service
+that does not start. If your condition is not there, go to [Give feedback](#give-feedback) — a pasted
+error is exactly what the form asks for.
 
 ## Step 2: watch the traffic
 
@@ -121,14 +123,17 @@ See [Install the cluster CLI](cli.md).
 
 :::info[Tell us when it breaks]
 
-Cortex on a laptop is new. If the install failed, the numbers looked wrong, or anything was unclear,
-we want to hear it.
+Cortex on a laptop is new. Report an install that failed, a figure that looked wrong, or a step that
+was not clear.
+
+Read [Troubleshooting](../operate/troubleshooting.md#on-a-laptop) first. It covers the most frequent
+conditions, and it answers a set of figures that look wrong and are correct.
 
 - Open the **Laptop feedback** form on
   [rossoctl/cortex](https://github.com/rossoctl/cortex/issues/new/choose)
 - Or write a message in [Slack](https://ibm.biz/rossoctl-slack)
 
-A half-finished install with the error pasted in is more useful to us than a polished bug report you
-never sent.
+A half-finished install, with the error in the report, is more useful than a complete report that you
+do not send.
 
 :::

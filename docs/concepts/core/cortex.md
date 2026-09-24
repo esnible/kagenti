@@ -59,8 +59,9 @@ step-by-step instructions, or the
 
 :::info[Tell us when it breaks]
 
-RossoCortex on a laptop is new. If the install failed, the numbers looked wrong, or anything was
-unclear, we want to hear it.
+RossoCortex on a laptop is new. Report an install that failed, a figure that looked wrong, or a step
+that was not clear. For a condition that already has an answer, read
+[Troubleshooting](../../operate/troubleshooting.md#on-a-laptop) first.
 
 - Open the **Laptop feedback** form on
   [rossoctl/cortex](https://github.com/rossoctl/cortex/issues/new/choose)
