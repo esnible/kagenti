@@ -109,6 +109,50 @@ The agent runs, but `abctl observe` shows no events. Check each cause in order:
 - **The pruning figure is zero.** The agent has no tool definitions to remove, or you did not enable
   pruning. See [Read the pruning savings](../get-started/reading-the-numbers.md#read-the-pruning-savings).
 
+### A figure looks wrong, but it is correct
+
+<!-- VERIFY v0.9.0: each answer below states behaviour read from
+     authbridge/cmd/abctl/README.md on cortex main (the Panes section) and from cmd_cost.go. Confirm
+     each one against a v0.9.0 binary. The `$0.00` answer depends on cortex#1046, which is open. -->
+
+These conditions are the display that Cortex intends. Each one reads as a defect, and each one is
+not.
+
+**A cell shows an em dash (`—`) instead of a number.** An em dash means that Cortex holds no figure.
+It does not mean zero. In the `COST` column, the model has no entry in the rate table, so Cortex shows
+no cost rather than a wrong zero. In the `CONTEXT` column, Cortex has not read a turn for that
+session yet.
+
+**The `COST` and `SAVED~` columns are absent.** Your terminal is narrower than 97 columns. Cortex
+removes both money columns rather than round a charge below one cent to `$0.00`. Make the terminal
+wider, and both columns return.
+
+**The sessions table adds up to less than `TODAY`.** The session store is in memory, so the table
+reaches back only to the start of the current service process. `TODAY` reads from the cost ledger on
+disk, and it survives a restart. A table that adds up to less than the band is therefore correct
+after you restart the service.
+
+**Three of the four spend cells show `—`.** `TODAY`, `7 DAYS` and `MONTH` read from the cost ledger.
+A local install holds that ledger. Kubernetes does not hold it by default, so those three periods have
+no figure. `LAST 1H` reads from memory, and it always has one.
+
+**A spend cell carries a time, such as `TODAY 7m`.** The figure is seven minutes old, because the
+data for that cell stopped arriving. Each cell polls on its own schedule, so the age belongs to the
+cell.
+
+**A figure carries `~`, `+` or `!`.** Each marker states what Cortex cannot state exactly: `~` is an
+estimate, `+` is a floor, and `!` is short by an amount that Cortex cannot measure. See
+[What a marker on a figure means](../get-started/reading-the-numbers.md#what-a-marker-on-a-figure-means).
+
+**One request costs `$0.000038`, and the session shows `<$0.01`.** The two surfaces use two
+precisions. The events table gives four decimals for one request. Every other surface gives cents,
+because you read those figures down a column. See
+[How precise a money figure is](../get-started/reading-the-numbers.md#how-precise-a-money-figure-is).
+
+**The context gauge is almost empty, and the agent is busy.** The gauge follows your conversation
+only. Claude Code sends the subagents that it starts, and its own short internal calls, under the same
+session identifier. Cortex excludes both from the gauge.
+
 ### Where the logs are, and what to attach to a bug report
 
 The service log is in the location that the service status reports. To attach a useful report to an
