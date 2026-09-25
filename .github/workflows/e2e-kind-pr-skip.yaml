@@ -7,11 +7,28 @@ name: E2E K8s 1.35.0 (Kind PR - Skip)
 # check never reports and GitHub blocks the merge on a missing check.
 #
 # This workflow reports the same check name as a no-op success for PRs that
-# touch none of the paths e2e-kind-pr.yaml cares about. Exactly one of the two
-# workflows runs for any given PR, so the check always reports and never
-# double-reports.
+# change no deployable paths.
 #
-# IMPORTANT: paths-ignore: here MUST stay the exact inverse of paths: in
+# How the two workflows interact (paths: and paths-ignore: with the same list
+# are NOT logical inverses):
+#
+#   - paths:        runs if ANY changed file matches.
+#   - paths-ignore: skips only if ALL changed files match; runs if any file
+#                   falls outside the list.
+#
+# So for a mixed PR (docs + deployable paths) BOTH workflows run and both post
+# a "Deploy & Test" context:
+#
+#   code-only PR   -> real runs, skip does not          (1 context)
+#   docs-only PR   -> real does not run, skip runs      (1 context)
+#   mixed PR       -> BOTH run                          (2 contexts)
+#
+# The mixed case is safe because the real E2E takes ~35 min while this job
+# finishes in seconds, so the real result lands last and is the one branch
+# protection evaluates. The guarantee is "the real result wins on completion
+# order", NOT "exactly one workflow runs" -- do not rely on mutual exclusion.
+#
+# IMPORTANT: paths-ignore: here MUST stay in sync with paths: in
 # e2e-kind-pr.yaml. If you add a path there, add it here too, or docs-only PRs
 # will hang on a missing check again.
 
@@ -38,6 +55,10 @@ permissions:
 
 jobs:
   e2e-dev-rossoctl-operator:
+    # This name is load-bearing: it must stay byte-identical (including the "&")
+    # to the job name in e2e-kind-pr.yaml and to the required check context on
+    # main. A silent rename here breaks required-check satisfaction on
+    # docs-only PRs. Compare the same constraint in e2e-hypershift-pending.yaml.
     name: Deploy & Test
     runs-on: ubuntu-latest
     timeout-minutes: 5
